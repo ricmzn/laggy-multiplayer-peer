@@ -1,0 +1,119 @@
+[gd_scene load_steps=5 format=3 uid="uid://ksxywfq1bpdv"]
+
+[ext_resource type="Script" uid="uid://b6kfp7hmmc1k6" path="res://scenes/main.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://cm5fig7xudyg6" path="res://scenes/player.tscn" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://dxgfdmhu5agcl" path="res://check_extension.gd" id="2_sugp2"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_0wfyh"]
+font_size = 72
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_ig7tw")
+
+[node name="CheckExtension" type="Node" parent="."]
+script = ExtResource("2_sugp2")
+
+[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+resources = [PackedStringArray("Player"), [ExtResource("2_0xm2m")]]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+spawn_path = NodePath("..")
+
+[node name="LabelCanvas" type="CanvasLayer" parent="."]
+
+[node name="CenterContainer" type="CenterContainer" parent="LabelCanvas"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="LabelCanvas/CenterContainer"]
+layout_mode = 2
+text = "Connecting..."
+label_settings = SubResource("LabelSettings_0wfyh")
+
+[node name="LagSettingsCanvas" type="CanvasLayer" parent="."]
+
+[node name="MarginContainer" type="MarginContainer" parent="LagSettingsCanvas"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LagSettingsCanvas/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Minimum Delay: "
+horizontal_alignment = 2
+
+[node name="MinDelaySlider" type="HSlider" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 2.0
+step = 0.01
+tick_count = 10
+ticks_on_borders = true
+
+[node name="MinDelayLabel" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "0ms"
+
+[node name="Label2" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Maximum Delay: "
+horizontal_alignment = 2
+
+[node name="MaxDelaySlider" type="HSlider" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 2.0
+step = 0.01
+tick_count = 10
+ticks_on_borders = true
+
+[node name="MaxDelayLabel" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "0ms"
+
+[node name="Label3" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Packet Loss: "
+horizontal_alignment = 2
+
+[node name="PacketLossSlider" type="HSlider" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+tick_count = 10
+ticks_on_borders = true
+
+[node name="PacketLossLabel" type="Label" parent="LagSettingsCanvas/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "0%"
+
+[connection signal="value_changed" from="LagSettingsCanvas/MarginContainer/HBoxContainer/MinDelaySlider" to="." method="_on_min_delay_slider_value_changed"]
+[connection signal="value_changed" from="LagSettingsCanvas/MarginContainer/HBoxContainer/MaxDelaySlider" to="." method="_on_max_delay_slider_value_changed"]
+[connection signal="value_changed" from="LagSettingsCanvas/MarginContainer/HBoxContainer/PacketLossSlider" to="." method="_on_packet_loss_slider_value_changed"]

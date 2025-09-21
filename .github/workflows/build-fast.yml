@@ -1,0 +1,84 @@
+name: Build GDExtension
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          [
+            { platform: linux, arch: x86_64, os: ubuntu-22.04 },
+            { platform: windows, arch: x86_64, os: windows-latest },
+            { platform: macos, arch: universal, os: macos-latest },
+          ]
+        target-type: [ template_debug, template_release ]
+        float-precision: [ single ]
+
+    runs-on: ${{ matrix.target.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # Setup dependencies
+      - name: Setup godot-cpp
+        uses: ./godot-cpp/.github/actions/setup-godot-cpp
+        with:
+          platform: ${{ matrix.target.platform }}
+
+      # Build GDExtension (with caches)
+      - name: Restore .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-restore
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+
+      - name: Build GDExtension Debug Build
+        shell: sh
+        env:
+          SCONS_CACHE: ${{ github.workspace }}/.scons-cache/
+        run: |
+          scons target=${{ matrix.target-type }} platform=${{ matrix.target.platform }} arch=${{ matrix.target.arch }} precision=${{ matrix.float-precision }}
+
+      - name: Save .scons_cache
+        uses: ./godot-cpp/.github/actions/godot-cache-save
+        with:
+          scons-cache: ${{ github.workspace }}/.scons-cache/
+          cache-name: ${{ matrix.target.platform }}_${{ matrix.target.arch }}_${{ matrix.float-precision }}_${{ matrix.target-type }}
+
+      # Package files as an addon
+      - name: Package Addon
+        shell: bash
+        run: |
+          mkdir -p artifact/addons/laggy-multiplayer-peer
+          mv demo/bin artifact/addons/laggy-multiplayer-peer/bin
+          mv demo/scenes artifact/addons/laggy-multiplayer-peer/demo/scenes
+          mv demo/check-extension* artifacts/addons/laggy-multiplayer-peer/demo/
+          find . \( -name *.exp -or -name *.lib -or -name *.pdb \) -exec rm -f {} \;
+
+      # Upload the build
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.target.platform }}-${{ matrix.target.arch }}-${{ matrix.float-precision }}-${{ matrix.target-type }}
+          path: artifact
+
+  # Merges all the build artifacts together into a single godot-cpp-template artifact.
+  # If you comment out this step, all the builds will be uploaded individually.
+  merge-artifacts:
+    runs-on: ubuntu-22.04
+    needs: build
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: LaggyMultiplayerPeer-${{ github.sha }}
+          pattern: artifact-*
+          delete-merged: true

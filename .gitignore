@@ -1,0 +1,18 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Compilation artifacts
+*.a
+*.dll
+*.dylib
+*.so
+*.os
+*.wasm
+.sconsign.dblite
+__pycache__/
+src/gen/
+
+# IDE files
+.idea/
+.vscode/

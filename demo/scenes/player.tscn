@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3 uid="uid://cm5fig7xudyg6"]
+
+[ext_resource type="Texture2D" uid="uid://duvgt5s5urah1" path="res://icon.svg" id="1_4flbx"]
+[ext_resource type="Script" uid="uid://bv1sgc766vgkw" path="res://scenes/player.gd" id="2_g2els"]
+[ext_resource type="PackedScene" uid="uid://cw83g06iylupb" path="res://scenes/ping.tscn" id="3_qhqgy"]
+
+[sub_resource type="Shader" id="Shader_qhqgy"]
+code = "shader_type canvas_item;
+
+uniform vec4 color : source_color = vec4(1.0);
+
+void fragment() {
+	COLOR = COLOR * color;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dqkch"]
+resource_local_to_scene = true
+shader = SubResource("Shader_qhqgy")
+shader_parameter/color = Color(1, 1, 1, 1)
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_g2els"]
+properties/0/path = NodePath("..:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+
+[node name="Player" type="Sprite2D"]
+material = SubResource("ShaderMaterial_dqkch")
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("1_4flbx")
+script = ExtResource("2_g2els")
+
+[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+resources = [PackedStringArray("Ping"), [ExtResource("3_qhqgy")]]
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+root_path = NodePath(".")
+replication_config = SubResource("SceneReplicationConfig_g2els")
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -188.0
+offset_top = -92.0
+offset_right = -68.0
+offset_bottom = -69.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "1"
+horizontal_alignment = 2
+clip_text = true

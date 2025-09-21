@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="LaggyMultiplayerPeer" inherits="MultiplayerPeerExtension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Network lag simulation for multiplayer peers.
+	</brief_description>
+	<description>
+		A special [MultiplayerPeer] implementation that provides the capability to simulate lag (latency and packet loss) on top of another [MultiplayerPeer].
+		This implementation is "protocol-less", which means it does not add or modify any data contained in the packets. As such, a [LaggyMultiplayerPeer] wrapping a peer of a specific type can still connect to other, non-wrapped peers of that same type.
+		Usage example, specifying lag parameters directly:
+		[codeblocks]
+		[gdscript]
+		func setup_client():
+			var enet_peer := ENetMultiplayerPeer.new()
+			var err := enet_peer.create_client("localhost", 1234) # Or your own connection details
+			if err != OK:
+				push_error("Failed to create client, error: %s" % error_string(err))
+				return
+			# 200ms delay with 1% packet loss
+			multiplayer.multiplayer_peer = LaggyMultiplayerPeer.create(enet_peer, 0.2, 0.2, 0.01)
+		[/gdscript]
+		[/codeblocks]
+		And another with a custom handler, using a variable to toggle it on and off:
+		[codeblocks]
+		[gdscript]
+		@export var enable_lag := false
+
+		func setup_client():
+			var enet_peer := ENetMultiplayerPeer.new()
+			var err := enet_peer.create_client("localhost", 1234) # Or your own connection details
+			if err != OK:
+				push_error("Failed to create client, error: %s" % error_string(err))
+				return
+			var laggy_peer := LaggyMultiplayerPeer.create(enet_peer)
+			laggy_peer.handle_send = create_lag
+			laggy_peer.handle_receive = create_lag
+			multiplayer.multiplayer_peer = laggy_peer
+
+		func create_lag(packet: Dictionary, peer: LaggyMultiplayerPeer):
+			if enable_lag:
+				# Same as before, 200ms delay with 1% packet loss
+				if randf() &lt; 0.01:
+					peer.drop_packet()
+			return 0.2
+		[/gdscript]
+		[/codeblocks]
+		Other examples of what can be done with [member handle_send] and [member handle_receive] are available in their respective documentation.
+		A runnable demo project is also included with this GDExtension, in the [code]demo/[/code] subfolder.
+		[b]Note:[/b] This class is not thread-safe, but this is not an issue as [method MultiplayerPeer.poll] is normally only called from a single thread.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="create" qualifiers="static">
+			<return type="LaggyMultiplayerPeer" />
+			<param index="0" name="wrapped_peer" type="MultiplayerPeer" />
+			<param index="1" name="delay_minimum" type="float" default="0.0" />
+			<param index="2" name="delay_maximum" type="float" default="0.0" />
+			<param index="3" name="packet_loss" type="float" default="0.0" />
+			<description>
+				Helper method to create a new [LaggyMultiplayerPeer] instance using common parameters.
+				Example:
+				[codeblocks]
+				[gdscript]
+				# This:
+				multiplayer.multiplayer_peer = LaggyMultiplayerPeer.create(my_peer, 0.0, 0.5, 0.1)
+				# Is equivalent to:
+				var laggy_peer := LaggyMultiplayerPeer.new()
+				laggy_peer.wrapped_peer = my_peer
+				laggy_peer.delay_minimum = 0.0
+				laggy_peer.delay_maximum = 0.5
+				laggy_peer.packet_loss = 0.1
+				multiplayer.multiplayer_peer = laggy_peer
+				[/gdscript]
+				[/codeblocks]
+			</description>
+		</method>
+		<method name="drop_packet">
+			<return type="void" />
+			<description>
+				Call from [member handle_send] or [member handle_receive] to request the current packet to be dropped. Reliable packets will be retried, using the delay given by the corresponding handler.
+				[b]Note:[/b] This method should not be called outside of these handlers, as it will return an error and have no effect.
+			</description>
+		</method>
+		<method name="get_version" qualifiers="static">
+			<return type="Dictionary" />
+			<description>
+				Returns the current version of the GDExtension library hosting this class.
+				The [Dictionary] has three [int] entries, representing the [url=https://semver.org/]Semantic Version[/url] of the library: [code]major[/code], [code]minor[/code], and [code]patch[/code].
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="delay_maximum" type="float" setter="set_delay_maximum" getter="get_delay_maximum" default="0.0">
+			Maximum random packet delay when [member handle_send] or [member handle_receive] is not defined, in seconds.
+			When this is lower than [member delay_minimum], the delay will always be [member delay_minimum].
+		</member>
+		<member name="delay_minimum" type="float" setter="set_delay_minimum" getter="get_delay_minimum" default="0.0">
+			Minimum random packet delay when [member handle_send] or [member handle_receive] is not defined, in seconds.
+		</member>
+		<member name="handle_receive" type="Callable" setter="set_handle_receive" getter="get_handle_receive" default="Callable()">
+			Custom handler that will be called by this peer when receiving packets. Must accept one or two arguments.
+			The first argument is a [Dictionary] with the following entries:
+			- [code]peer[/code]: An [int] that is the source peer ID of the current packet.
+			- [code]mode[/code]: A [enum MultiplayerPeer.TransferMode] that is the transfer mode used by the current packet.
+			- [code]channel[/code]: An [int] that is the channel ID used by the current packet.
+			- [code]size[/code]: An [int] that is the size of the data contained in the current packet, in bytes.
+			Optionally, the handler can also accept a second argument, which is the [LaggyMultiplayerPeer] that called it.
+			The handler can return an [int] or [float], which will be used as the delay (in seconds) before the packet is available to [MultiplayerAPI]. If nothing is returned, there will be no delay.
+			Inside of the handler, [method drop_packet] can be called to request the current packet to be dropped. If [code]mode[/code] is [constant MultiplayerPeer.TRANSFER_MODE_RELIABLE], the packet will be automatically retried with the given delay, and will go through this handler again.
+			If valid, the handler overrides [member delay_minimum], [member delay_maximum], and [member packet_loss] when receiving packets.
+			Example handlers:
+			[codeblocks]
+			[gdscript]
+			func slow_receiver(packet: Dictionary) -&gt; float:
+				# Delay varies between 200ms and 400ms, using a smooth time-based sine curve
+				return remap(sin(Time.get_ticks_msec() / 1000.0), -1, 1, 0.2, 0.4)
+
+			func unreliable_receiver(packet: Dictionary, peer: LaggyMultiplayerPeer) -&gt; void:
+				# 50% chance to drop packets received from any peer with an even ID, and no delay
+				if packet.peer % 2 == 0 and randf() &lt; 0.5:
+					peer.drop_packet()
+			[/gdscript]
+			[/codeblocks]
+		</member>
+		<member name="handle_send" type="Callable" setter="set_handle_send" getter="get_handle_send" default="Callable()">
+			Custom handler that will be called by this peer when sending packets. Must accept one or two arguments.
+			The first argument is a [Dictionary] with the following entries:
+			- [code]peer[/code]: An [int] that is the destination peer ID of the current packet.
+			- [code]mode[/code]: A [enum MultiplayerPeer.TransferMode] that is the transfer mode used by the current packet.
+			- [code]channel[/code]: An [int] that is the channel ID used by the current packet.
+			- [code]size[/code]: An [int] that is the size of the data contained in the current packet, in bytes.
+			Optionally, the handler can also accept a second argument, which is the [LaggyMultiplayerPeer] that called it.
+			The handler can return an [int] or [float], which will be used as the delay (in seconds) before the packet is available to [MultiplayerAPI]. If nothing is returned, there will be no delay.
+			Inside of the handler, [method drop_packet] can be called to request the current packet to be dropped. If [code]mode[/code] is [constant MultiplayerPeer.TRANSFER_MODE_RELIABLE], the packet will be automatically retried with the given delay, and will go through this handler again.
+			If valid, the handler overrides [member delay_minimum], [member delay_maximum], and [member packet_loss] when sending packets.
+			Example handlers:
+			[codeblocks]
+			[gdscript]
+			func slow_sender(packet: Dictionary) -&gt; float:
+				# 2-10 ms per byte, so each kilobyte takes 2-10 seconds, randomized per packet
+				return randf_range(packet.size * 0.002, packet.size * 0.010)
+
+			func unreliable_sender(packet: Dictionary, peer: LaggyMultiplayerPeer) -&gt; float:
+				# 30% chance to drop packets above 50 bytes, and a constant delay of 100ms
+				if packet.size &gt; 50 and randf() &lt; 0.3:
+					peer.drop_packet()
+				return 0.1
+			[/gdscript]
+			[/codeblocks]
+		</member>
+		<member name="packet_loss" type="float" setter="set_packet_loss" getter="get_packet_loss" default="0.0">
+			Probability of dropping each packet, when [member handle_send] or [member handle_receive] is not defined. 0.0 is no packet loss, 1.0 is 100% packet loss. Reliable packets will always be retried.
+		</member>
+		<member name="wrapped_peer" type="MultiplayerPeer" setter="set_wrapped_peer" getter="get_wrapped_peer">
+			Actual peer used for sending and receiving packets over the network, like an instance of [ENetMultiplayerPeer], [WebSocketMultiplayerPeer], [WebRTCMultiplayerPeer], or a [MultiplayerPeerExtension] provided by a third-party extension.
+			[b]Note:[/b] modifying this property during an active session will cause all queued packets to be dropped, even reliable ones. As such, this should not be done to an active peer.
+		</member>
+	</members>
+</class>
