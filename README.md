@@ -40,6 +40,7 @@ multiplayer.multiplayer_peer = LaggyMultiplayerPeer.create(enet_peer, 0.2, 0.2, 
 - Run `scons` in the root of the project directory, optionally passing extra parameters to build for a specific platform, or with specific settings (ie. `dev_build=yes` for debugging symbols).
 - The compiled library files will be installed in `demo/bin/${platform}/`.
 - Optionally, run the demo project to confirm that your changes are working.
+- **Note:** This library can only be built using scons! The CMakeLists.txt file is only for IDE compatibility (ie. CLion).
 
 ## Demo Project
 A runnable demo project is included in the `demo/` sub-folder.
