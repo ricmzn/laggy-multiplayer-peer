@@ -1,5 +1,5 @@
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ricmzn/laggy-multiplayer-peer-staging/build-main.yml)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ricmzn/laggy-multiplayer-peer/build-main.yml)
 
 # LaggyMultiplayerPeer
 Network lag simulation for the Godot Multiplayer API.
